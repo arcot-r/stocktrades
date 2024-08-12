@@ -4,42 +4,41 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hackerrank.stocktrades.model.StockTrade;
 import com.hackerrank.stocktrades.repository.StockTradeRepository;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 public class ApplicationTests {
-    ObjectMapper om = new ObjectMapper();
+
+    ObjectMapper objMapper = new ObjectMapper();
+
     @Autowired
     StockTradeRepository stockTradeRepository;
+
     @Autowired
     MockMvc mockMvc;
 
     Map<String, StockTrade> testData;
 
-    @Before
+    @BeforeEach
     public void setup() {
         stockTradeRepository.deleteAll();
         testData = getTestData();
@@ -48,44 +47,43 @@ public class ApplicationTests {
     @Test
     public void testTradeCreationWithValidData() throws Exception {
         StockTrade expectedRecord = testData.get("user23ABX");
-        StockTrade actualRecord = om.readValue(mockMvc.perform(post("/trades")
+        StockTrade actualRecord = objMapper.readValue(mockMvc.perform(post("/trades")
                 .contentType("application/json")
-                .content(om.writeValueAsString(expectedRecord)))
+                .content(objMapper.writeValueAsString(expectedRecord)))
                 .andDo(print())
                 .andExpect(jsonPath("$.id", greaterThan(0)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), StockTrade.class);
 
-        Assert.assertTrue(new ReflectionEquals(expectedRecord, "id").matches(actualRecord));
-        assertEquals(true, stockTradeRepository.findById(actualRecord.getId()).isPresent());
+        assertTrue(new ReflectionEquals(expectedRecord, "id").matches(actualRecord));
+        assertTrue(stockTradeRepository.findById(actualRecord.getId()).isPresent());
 
         expectedRecord = testData.get("user23AAC");
-        actualRecord = om.readValue(mockMvc.perform(post("/trades")
+        actualRecord = objMapper.readValue(mockMvc.perform(post("/trades")
                 .contentType("application/json")
-                .content(om.writeValueAsString(expectedRecord)))
+                .content(objMapper.writeValueAsString(expectedRecord)))
                 .andDo(print())
                 .andExpect(jsonPath("$.id", greaterThan(0)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), StockTrade.class);
 
-        Assert.assertTrue(new ReflectionEquals(expectedRecord, "id").matches(actualRecord));
-        assertEquals(true, stockTradeRepository.findById(actualRecord.getId()).isPresent());
-
+        assertTrue(new ReflectionEquals(expectedRecord, "id").matches(actualRecord));
+        assertTrue(stockTradeRepository.findById(actualRecord.getId()).isPresent());
     }
 
     @Test
     public void testGetAllTrades() throws Exception {
-        Map<String, StockTrade> testData = getTestData().entrySet().stream().filter(kv -> "user23ABX,user23AAC".contains(kv.getKey())).collect(Collectors.toMap(kv -> kv.getKey(), kv -> kv.getValue()));
+        Map<String, StockTrade> testData = getTestData().entrySet().stream().filter(kv -> "user23ABX,user23AAC".contains(kv.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         List<StockTrade> expectedRecords = new ArrayList<>();
         for (Map.Entry<String, StockTrade> kv : testData.entrySet()) {
-            expectedRecords.add(om.readValue(mockMvc.perform(post("/trades")
+            expectedRecords.add(objMapper.readValue(mockMvc.perform(post("/trades")
                     .contentType("application/json")
-                    .content(om.writeValueAsString(kv.getValue())))
+                    .content(objMapper.writeValueAsString(kv.getValue())))
                     .andDo(print())
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), StockTrade.class));
         }
-        Collections.sort(expectedRecords, Comparator.comparing(StockTrade::getId));
+        expectedRecords.sort(Comparator.comparing(StockTrade::getId));
 
-        List<StockTrade> actualRecords = om.readValue(mockMvc.perform(get("/trades"))
+        List<StockTrade> actualRecords = objMapper.readValue(mockMvc.perform(get("/trades"))
                 .andDo(print())
                 .andExpect(jsonPath("$.*", isA(ArrayList.class)))
                 .andExpect(jsonPath("$.*", hasSize(expectedRecords.size())))
@@ -93,7 +91,7 @@ public class ApplicationTests {
         });
 
         for (int i = 0; i < expectedRecords.size(); i++) {
-            Assert.assertTrue(new ReflectionEquals(expectedRecords.get(i)).matches(actualRecords.get(i)));
+            assertTrue(new ReflectionEquals(expectedRecords.get(i)).matches(actualRecords.get(i)));
         }
     }
 
@@ -101,21 +99,21 @@ public class ApplicationTests {
     public void testGetTradeRecordWithId() throws Exception {
         StockTrade expectedRecord = getTestData().get("user23ABX");
 
-        expectedRecord = om.readValue(mockMvc.perform(post("/trades")
+        expectedRecord = objMapper.readValue(mockMvc.perform(post("/trades")
                 .contentType("application/json")
-                .content(om.writeValueAsString(expectedRecord)))
+                .content(objMapper.writeValueAsString(expectedRecord)))
                 .andDo(print())
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), StockTrade.class);
 
-        StockTrade actualRecord = om.readValue(mockMvc.perform(get("/trades/" + expectedRecord.getId()))
+        StockTrade actualRecord = objMapper.readValue(mockMvc.perform(get("/trades/" + expectedRecord.getId()))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString(), StockTrade.class);
 
-        Assert.assertTrue(new ReflectionEquals(expectedRecord).matches(actualRecord));
+        assertTrue(new ReflectionEquals(expectedRecord).matches(actualRecord));
 
-        //non existing record test
+        // Non-existing record test
         mockMvc.perform(get("/trades/" + Integer.MAX_VALUE))
                 .andExpect(status().isNotFound());
     }
@@ -124,9 +122,9 @@ public class ApplicationTests {
     public void testNotAllowedMethod() throws Exception {
         StockTrade expectedRecord = getTestData().get("user23ABX");
 
-        StockTrade actualRecord = om.readValue(mockMvc.perform(post("/trades")
+        StockTrade actualRecord = objMapper.readValue(mockMvc.perform(post("/trades")
                 .contentType("application/json")
-                .content(om.writeValueAsString(expectedRecord)))
+                .content(objMapper.writeValueAsString(expectedRecord)))
                 .andDo(print())
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), StockTrade.class);
 
@@ -149,7 +147,7 @@ public class ApplicationTests {
                 "ABX",
                 30,
                 134,
-                1591522701000l);
+                1591522701000L);
         data.put("user23ABX", user23ABX);
 
         StockTrade user23AAC = new StockTrade(
@@ -158,7 +156,7 @@ public class ApplicationTests {
                 "AAC",
                 12,
                 133,
-                1591572701000l);
+                1591572701000L);
         data.put("user23AAC", user23AAC);
 
         StockTrade user24AAC = new StockTrade(
@@ -167,7 +165,7 @@ public class ApplicationTests {
                 "AAC",
                 12,
                 133,
-                1591572791000l);
+                1591572791000L);
         data.put("user24AAC", user24AAC);
 
         StockTrade user25AAC = new StockTrade(
@@ -176,9 +174,8 @@ public class ApplicationTests {
                 "AAC",
                 12,
                 111,
-                1571572791000l);
+                1571572791000L);
         data.put("user25AAC", user25AAC);
-
 
         return data;
     }
